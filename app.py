@@ -71,6 +71,6 @@ if __name__ == "__main__":
             router.app = app
             app.register_blueprint(router)
     try:
-        app.run(host="0.0.0.0", port=3217, debug=False)
+        app.run(host="0.0.0.0", port=8000, debug=False)
     except KeyboardInterrupt:
         print("Shutting down...")

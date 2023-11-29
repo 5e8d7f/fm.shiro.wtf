@@ -1,12 +1,11 @@
 
+
 import asyncio
-import io
 import json
-import random
 from urllib.parse import quote
 
 import aiohttp
-from quart import Blueprint, jsonify, request, send_file
+from quart import Blueprint, jsonify, request
 
 router = Blueprint("fm", __name__)
 
@@ -14,12 +13,6 @@ router = Blueprint("fm", __name__)
 
 @router.get(
     "/profile",
-    # name="Get Last.fm Profile",
-    # description="Get a Last.fm user's profile",
-    # parameters={
-    #    "username": "Last.fm username",
-    #    "library": "Indicate top item in library",
-    # },
 )
 async def profile():
     username = request.args.get("username") or request.args.get("user")
@@ -297,7 +290,11 @@ async def recenttracks():
             "method": "user.getRecentTracks",
             "username": username,
             "limit": min(
-                (int(request.args.get("limit") or 10) if not request.args.get("artist") else 200),
+                (
+                    int(request.args.get("limit") or 10)
+                    if not request.args.get("artist")
+                    else 200
+                ),
                 1000,
             ),
             "autocorrect": 1,
@@ -306,7 +303,11 @@ async def recenttracks():
     )
 
     if artist := request.args.get("artist"):
-        tracks = [track for track in tracks["track"] if track["artist"]["#text"].lower() == artist.lower()]
+        tracks = [
+            track
+            for track in tracks["track"]
+            if track["artist"]["#text"].lower() == artist.lower()
+        ]
     else:
         tracks = tracks["track"]
 
@@ -580,16 +581,10 @@ async def collage():
 
             return jsonify(
                 {
-                    "url": "https://blob.wock.cloud/collage" + data["path"].split("images")[1].split(".webp")[0],
+                    "url": "https://lastcollage.io/" + data["path"],
                     "period": replace_timeframe(period, human=True),
                 }
             )
-
-            async with session.get("https://lastcollage.io/" + data["path"]) as response:
-                return await send_file(
-                    io.BytesIO(await response.read()),
-                    mimetype="image/png",
-                )
 
 
 @router.get(
@@ -762,7 +757,9 @@ async def track_search():
                 "url": data["url"],
                 "name": data["name"],
                 "artist": data["artist"]["name"],
-                "image": data["album"]["image"][-1]["#text"] or None if data.get("album") else None,
+                "image": data["album"]["image"][-1]["#text"] or None
+                if data.get("album")
+                else None,
                 "plays": int(data["userplaycount"]),
             }
         ),
