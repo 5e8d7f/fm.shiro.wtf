@@ -985,7 +985,7 @@ async def response(payload: dict, parameter: str = None, **kwargs: dict):
     autocorrect = payload.pop("autocorrect", 0)
     payload.update(
         {
-            "api_key": random.choice(router.config["api"].get("lastfm")),
+            "api_key": "cbb5022494306605ba105a9a7495cbb8",
             "format": "json",
             "autocorrect": 0,
         }
