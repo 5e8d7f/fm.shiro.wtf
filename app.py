@@ -791,7 +791,7 @@ async def library_artists(request):
                 ]
             )
 
-    return+ json(artists)
+    return json(artists)
 
 
 @app.get(
