@@ -1015,32 +1015,7 @@ async def response(payload: dict, parameter: str = None, **kwargs: dict):
                     data = replace_artist(
                         data,
                         "Lucky Twice",
-                        "Lucki",
-                    )
-                    data = replace_artist(
-                        data,
                         "LUCKI",
-                        "Lucki",
-                    )
-                    data = replace_artist(
-                        data,
-                        "yeat",
-                        "Yeat",
-                    )
-                    data = replace_artist(
-                        data,
-                        "Ken Car$on",
-                        "Ken Carson",
-                    )
-                    data = replace_artist(
-                        data,
-                        "SLEEPY HALLOW",
-                        "Sleepy Hallow",
-                    )
-                    data = replace_artist(
-                        data,
-                        "LIL TRACY",
-                        "Lil Tracy",
                     )
                     data = json.loads(data)
                 return data if not parameter else data[parameter]
