@@ -1,118 +1,120 @@
-
-
 import asyncio
 import json
+import random
 from urllib.parse import quote
 
 import aiohttp
 from quart import Blueprint, jsonify, request
 
-router = Blueprint("fm", __name__)
+import config
 
+router = Blueprint('fm', __name__)
 
 
 @router.get(
-    "/profile",
+    '/profile',
 )
 async def profile():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
     data = await response(
         {
-            "method": "user.getInfo",
-            "username": username,
+            'method': 'user.getInfo',
+            'username': username,
         },
-        "user",
+        'user',
     )
 
     output = {
-        "url": data["url"],
-        "username": data["name"],
-        "full_name": data["realname"] or None,
-        "avatar": data["image"][-1]["#text"].replace(".png", ".gif") or None,
-        "library": {
-            "scrobbles": int(data["playcount"]),
-            "artists": int(data["artist_count"]),
-            "albums": int(data["album_count"]),
-            "tracks": int(data["track_count"]),
+        'url': data['url'],
+        'username': data['name'],
+        'full_name': data['realname'] or None,
+        'avatar': data['image'][-1]['#text'].replace('.png', '.gif') or None,
+        'library': {
+            'scrobbles': int(data['playcount']),
+            'artists': int(data['artist_count']),
+            'albums': int(data['album_count']),
+            'tracks': int(data['track_count']),
         },
-        "meta": {
-            "registered": data["registered"]["#text"],
-            "country": (data["country"] if data["country"] != "None" else None),
-            "age": int(data["age"]),
-            "pro": data["type"] == "subscriber",
+        'meta': {
+            'registered': data['registered']['#text'],
+            'country': (
+                data['country'] if data['country'] != 'None' else None
+            ),
+            'age': int(data['age']),
+            'pro': data['type'] == 'subscriber',
         },
     }
 
-    if request.args.get("library"):
+    if request.args.get('library'):
         tasks = list()
         tasks.append(
             response(
                 {
-                    "method": "user.getTopArtists",
-                    "username": username,
-                    "limit": 1,
-                    "autocorrect": 1,
+                    'method': 'user.getTopArtists',
+                    'username': username,
+                    'limit': 1,
+                    'autocorrect': 1,
                 },
-                "topartists",
+                'topartists',
             )
         )
         tasks.append(
             response(
                 {
-                    "method": "user.getTopAlbums",
-                    "username": username,
-                    "limit": 1,
-                    "autocorrect": 1,
+                    'method': 'user.getTopAlbums',
+                    'username': username,
+                    'limit': 1,
+                    'autocorrect': 1,
                 },
-                "topalbums",
+                'topalbums',
             )
         )
         tasks.append(
             response(
                 {
-                    "method": "user.getTopTracks",
-                    "username": username,
-                    "limit": 1,
-                    "autocorrect": 1,
+                    'method': 'user.getTopTracks',
+                    'username': username,
+                    'limit': 1,
+                    'autocorrect': 1,
                 },
-                "toptracks",
+                'toptracks',
             )
         )
 
         artist, album, track = await asyncio.gather(*tasks)
         if artist:
-            artist = artist["artist"][0]
-            output["library"]["artist"] = {
-                "url": artist["url"],
-                "name": artist["name"],
-                "image": artist["image"][-1]["#text"] or None,
-                "plays": int(artist["playcount"]),
+            artist = artist['artist'][0]
+            output['library']['artist'] = {
+                'url': artist['url'],
+                'name': artist['name'],
+                'image': artist['image'][-1]['#text'] or None,
+                'plays': int(artist['playcount']),
             }
         if album:
-            album = album["album"][0]
-            output["library"]["album"] = {
-                "url": album["url"],
-                "name": album["name"],
-                "image": album["image"][-1]["#text"] or None,
-                "plays": int(album["playcount"]),
-                "artist": {
-                    "url": album["artist"]["url"],
-                    "name": album["artist"]["name"],
+            album = album['album'][0]
+            output['library']['album'] = {
+                'url': album['url'],
+                'name': album['name'],
+                'image': album['image'][-1]['#text'] or None,
+                'plays': int(album['playcount']),
+                'artist': {
+                    'url': album['artist']['url'],
+                    'name': album['artist']['name'],
                 },
             }
         if track:
-            track = track["track"][0]
-            output["library"]["track"] = {
-                "url": track["url"],
-                "name": track["name"],
-                "image": track["image"][-1]["#text"] or None,
-                "plays": int(track["playcount"]),
-                "artist": {
-                    "url": track["artist"]["url"],
-                    "name": track["artist"]["name"],
+            track = track['track'][0]
+            output['library']['track'] = {
+                'url': track['url'],
+                'name': track['name'],
+                'image': track['image'][-1]['#text'] or None,
+                'plays': int(track['playcount']),
+                'artist': {
+                    'url': track['artist']['url'],
+                    'name': track['artist']['name'],
                 },
             }
 
@@ -123,7 +125,7 @@ async def profile():
 
 
 @router.get(
-    "/nowplaying",
+    '/nowplaying',
     # name="Get Last.fm Now Playing",
     # description="Get a Last.fm user's currently playing track",
     # parameters={
@@ -131,30 +133,30 @@ async def profile():
     # },
 )
 async def nowplaying():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
     tracks = await response(
         {
-            "method": "user.getRecentTracks",
-            "username": username,
-            "limit": 1,
-            "autocorrect": 1 if request.args.get("simple") else 0,
+            'method': 'user.getRecentTracks',
+            'username': username,
+            'limit': 1,
+            'autocorrect': 1 if request.args.get('simple') else 0,
         },
-        "recenttracks",
+        'recenttracks',
     )
-    track, _track = tracks["track"][0], tracks["track"][0]
+    track, _track = tracks['track'][0], tracks['track'][0]
 
-    if request.args.get("simple"):
+    if request.args.get('simple'):
         return (
             jsonify(
                 {
-                    "url": track["url"],
-                    "name": track["name"],
-                    "image": track["image"][-1]["#text"] or None,
-                    "artist": track["artist"]["#text"],
-                    "album": track["album"]["#text"] or None,
+                    'url': track['url'],
+                    'name': track['name'],
+                    'image': track['image'][-1]['#text'] or None,
+                    'artist': track['artist']['#text'],
+                    'album': track['album']['#text'] or None,
                 }
             ),
             200,
@@ -164,46 +166,46 @@ async def nowplaying():
     tasks.append(
         response(
             {
-                "method": "user.getInfo",
-                "username": username,
+                'method': 'user.getInfo',
+                'username': username,
             },
-            "user",
+            'user',
         )
     )
     tasks.append(
         response(
             {
-                "method": "track.getInfo",
-                "username": username,
-                "artist": track["artist"]["#text"],
-                "track": track["name"],
-                "autocorrect": 1,
+                'method': 'track.getInfo',
+                'username': username,
+                'artist': track['artist']['#text'],
+                'track': track['name'],
+                'autocorrect': 1,
             },
-            "track",
+            'track',
         )
     )
     tasks.append(
         response(
             {
-                "method": "artist.getInfo",
-                "username": username,
-                "artist": track["artist"]["#text"],
-                "autocorrect": 1,
+                'method': 'artist.getInfo',
+                'username': username,
+                'artist': track['artist']['#text'],
+                'autocorrect': 1,
             },
-            "artist",
+            'artist',
         )
     )
-    if track["album"]["#text"]:
+    if track['album']['#text']:
         tasks.append(
             response(
                 {
-                    "method": "album.getInfo",
-                    "username": username,
-                    "artist": track["artist"]["#text"],
-                    "album": track["album"]["#text"],
-                    "autocorrect": 1,
+                    'method': 'album.getInfo',
+                    'username': username,
+                    'artist': track['artist']['#text'],
+                    'album': track['album']['#text'],
+                    'autocorrect': 1,
                 },
-                "album",
+                'album',
                 null_output=True,
             )
         )
@@ -213,54 +215,57 @@ async def nowplaying():
     user, track, artist, album = await asyncio.gather(*tasks)
 
     output = {
-        "url": track["url"],
-        "name": track["name"],
-        "image": {
-            "url": _track["image"][-1]["#text"],
+        'url': track['url'],
+        'name': track['name'],
+        'image': {
+            'url': _track['image'][-1]['#text'],
         }
-        if _track["image"][-1].get("#text")
+        if _track['image'][-1].get('#text')
         else None,
-        "plays": int(track["userplaycount"]),
-        "playing": not bool(_track.get("date")),
-        "artist": {
-            "url": artist["url"],
-            "name": artist["name"],
-            "image": artist["image"][-1]["#text"] or None,
-            "plays": int(artist["stats"]["userplaycount"]),
+        'plays': int(track['userplaycount']),
+        'playing': not bool(_track.get('date')),
+        'artist': {
+            'url': artist['url'],
+            'name': artist['name'],
+            'image': artist['image'][-1]['#text'] or None,
+            'plays': int(artist['stats']['userplaycount']),
         },
     }
     if album:
-        output["album"] = {
-            "url": album["url"],
-            "name": album["name"],
-            "image": album["image"][-1]["#text"] or None,
-            "plays": int(album["userplaycount"]),
-            "tracks": [
+        output['album'] = {
+            'url': album['url'],
+            'name': album['name'],
+            'image': album['image'][-1]['#text'] or None,
+            'plays': int(album['userplaycount']),
+            'tracks': [
                 {
-                    "url": _track["url"],
-                    "name": _track["name"],
+                    'url': _track['url'],
+                    'name': _track['name'],
                 }
-                for _track in album["tracks"]["track"]
+                for _track in album['tracks']['track']
             ]
-            if album.get("tracks") and not isinstance(album["tracks"]["track"], dict)
+            if album.get('tracks')
+            and not isinstance(album['tracks']['track'], dict)
             else [],
         }
-    output["user"] = {
-        "url": user["url"],
-        "username": user["name"],
-        "full_name": user["realname"] or None,
-        "avatar": user["image"][-1]["#text"].replace(".png", ".gif") or None,
-        "library": {
-            "scrobbles": int(user["playcount"]),
-            "artists": int(user["artist_count"]),
-            "albums": int(user["album_count"]),
-            "tracks": int(user["track_count"]),
+    output['user'] = {
+        'url': user['url'],
+        'username': user['name'],
+        'full_name': user['realname'] or None,
+        'avatar': user['image'][-1]['#text'].replace('.png', '.gif') or None,
+        'library': {
+            'scrobbles': int(user['playcount']),
+            'artists': int(user['artist_count']),
+            'albums': int(user['album_count']),
+            'tracks': int(user['track_count']),
         },
-        "meta": {
-            "registered": user["registered"]["#text"],
-            "country": (user["country"] if user["country"] != "None" else None),
-            "age": int(user["age"]),
-            "pro": user["type"] == "subscriber",
+        'meta': {
+            'registered': user['registered']['#text'],
+            'country': (
+                user['country'] if user['country'] != 'None' else None
+            ),
+            'age': int(user['age']),
+            'pro': user['type'] == 'subscriber',
         },
     }
 
@@ -271,7 +276,7 @@ async def nowplaying():
 
 
 @router.get(
-    "/recenttracks",
+    '/recenttracks',
     # name="Get Last.fm Recent Tracks",
     # description="Get a Last.fm user's recently played tracks",
     # parameters={
@@ -281,61 +286,63 @@ async def nowplaying():
     # },
 )
 async def recenttracks():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
     tracks = await response(
         {
-            "method": "user.getRecentTracks",
-            "username": username,
-            "limit": min(
+            'method': 'user.getRecentTracks',
+            'username': username,
+            'limit': min(
                 (
-                    int(request.args.get("limit") or 10)
-                    if not request.args.get("artist")
+                    int(request.args.get('limit') or 10)
+                    if not request.args.get('artist')
                     else 200
                 ),
                 1000,
             ),
-            "autocorrect": 1,
+            'autocorrect': 1,
         },
-        "recenttracks",
+        'recenttracks',
     )
 
-    if artist := request.args.get("artist"):
+    if artist := request.args.get('artist'):
         tracks = [
             track
-            for track in tracks["track"]
-            if track["artist"]["#text"].lower() == artist.lower()
+            for track in tracks['track']
+            if track['artist']['#text'].lower() == artist.lower()
         ]
     else:
-        tracks = tracks["track"]
+        tracks = tracks['track']
 
     return (
         jsonify(
             [
                 {
-                    "url": track["url"],
-                    "name": track["name"],
-                    "image": track["image"][-1]["#text"] or None,
-                    "artist": {
-                        "name": track["artist"]["#text"],
-                        "url": "https://www.last.fm/music/{}".format(
-                            quote(track["artist"]["#text"], safe=""),
+                    'url': track['url'],
+                    'name': track['name'],
+                    'image': track['image'][-1]['#text'] or None,
+                    'artist': {
+                        'name': track['artist']['#text'],
+                        'url': 'https://www.last.fm/music/{}'.format(
+                            quote(track['artist']['#text'], safe=''),
                         ),
                     },
-                    "album": {
-                        "name": track["album"]["#text"],
-                        "url": "https://www.last.fm/music/{}/{}".format(
-                            quote(track["artist"]["#text"], safe=""),
-                            quote(track["album"]["#text"], safe=""),
+                    'album': {
+                        'name': track['album']['#text'],
+                        'url': 'https://www.last.fm/music/{}/{}'.format(
+                            quote(track['artist']['#text'], safe=''),
+                            quote(track['album']['#text'], safe=''),
                         ),
                     }
-                    if track["album"]["#text"]
+                    if track['album']['#text']
                     else None,
-                    "date": int(track["date"]["uts"]) if track.get("date") else None,
+                    'date': int(track['date']['uts'])
+                    if track.get('date')
+                    else None,
                 }
-                for track in tracks[: int(request.args.get("limit") or 10)]
+                for track in tracks[: int(request.args.get('limit') or 10)]
             ]
         ),
         200,
@@ -343,7 +350,7 @@ async def recenttracks():
 
 
 @router.get(
-    "/topartists",
+    '/topartists',
     # name="Get Last.fm Top Artists",
     # description="Get a Last.fm user's top artists",
     # parameters={
@@ -353,37 +360,37 @@ async def recenttracks():
     # },
 )
 async def topartists():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
-    period = replace_timeframe(request.args.get("period", "overall"))
+    period = replace_timeframe(request.args.get('period', 'overall'))
 
     data = await response(
         {
-            "method": "user.getTopArtists",
-            "username": username,
-            "period": period,
-            "limit": min(int(request.args.get("limit", 10)), 1000),
-            "page": 1,
-            "autocorrect": 1,
+            'method': 'user.getTopArtists',
+            'username': username,
+            'period': period,
+            'limit': min(int(request.args.get('limit', 10)), 1000),
+            'page': 1,
+            'autocorrect': 1,
         },
-        "topartists",
+        'topartists',
     )
 
     return (
         jsonify(
             {
-                "artists": [
+                'artists': [
                     {
-                        "url": artist["url"],
-                        "name": artist["name"],
-                        "image": artist["image"][-1]["#text"] or None,
-                        "plays": int(artist["playcount"]),
+                        'url': artist['url'],
+                        'name': artist['name'],
+                        'image': artist['image'][-1]['#text'] or None,
+                        'plays': int(artist['playcount']),
                     }
-                    for artist in data["artist"]
+                    for artist in data['artist']
                 ],
-                "period": replace_timeframe(period, human=True),
+                'period': replace_timeframe(period, human=True),
             }
         ),
         200,
@@ -391,7 +398,7 @@ async def topartists():
 
 
 @router.get(
-    "/topalbums",
+    '/topalbums',
     # name="Get Last.fm Top Albums",
     # description="Get a Last.fm user's top albums",
     # parameters={
@@ -401,41 +408,41 @@ async def topartists():
     # },
 )
 async def topalbums():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
-    period = replace_timeframe(request.args.get("period", "overall"))
+    period = replace_timeframe(request.args.get('period', 'overall'))
 
     data = await response(
         {
-            "method": "user.getTopAlbums",
-            "username": username,
-            "period": period,
-            "limit": min(int(request.args.get("limit", 10)), 1000),
-            "page": 1,
-            "autocorrect": 1,
+            'method': 'user.getTopAlbums',
+            'username': username,
+            'period': period,
+            'limit': min(int(request.args.get('limit', 10)), 1000),
+            'page': 1,
+            'autocorrect': 1,
         },
-        "topalbums",
+        'topalbums',
     )
 
     return (
         jsonify(
             {
-                "albums": [
+                'albums': [
                     {
-                        "url": album["url"],
-                        "name": album["name"],
-                        "image": album["image"][-1]["#text"] or None,
-                        "artist": {
-                            "url": album["artist"]["url"],
-                            "name": album["artist"]["name"],
+                        'url': album['url'],
+                        'name': album['name'],
+                        'image': album['image'][-1]['#text'] or None,
+                        'artist': {
+                            'url': album['artist']['url'],
+                            'name': album['artist']['name'],
                         },
-                        "plays": int(album["playcount"]),
+                        'plays': int(album['playcount']),
                     }
-                    for album in data["album"]
+                    for album in data['album']
                 ],
-                "period": replace_timeframe(period, human=True),
+                'period': replace_timeframe(period, human=True),
             }
         ),
         200,
@@ -443,7 +450,7 @@ async def topalbums():
 
 
 @router.get(
-    "/favorites",
+    '/favorites',
     # name="Get Last.fm Loved Tracks",
     # description="Get a Last.fm user's loved tracks",
     # parameters={
@@ -452,38 +459,38 @@ async def topalbums():
     # },
 )
 async def favorites():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
     data = await response(
         {
-            "method": "user.getLovedTracks",
-            "username": username,
-            "limit": min(int(request.args.get("limit", 50)), 1000),
-            "page": 1,
-            "autocorrect": 1,
+            'method': 'user.getLovedTracks',
+            'username': username,
+            'limit': min(int(request.args.get('limit', 50)), 1000),
+            'page': 1,
+            'autocorrect': 1,
         },
-        "lovedtracks",
+        'lovedtracks',
     )
 
     return (
         jsonify(
             {
-                "tracks": [
+                'tracks': [
                     {
-                        "url": track["url"],
-                        "name": track["name"],
-                        "image": track["image"][-1]["#text"] or None,
-                        "artist": {
-                            "name": track["artist"]["name"],
-                            "url": "https://www.last.fm/music/{}".format(
-                                quote(track["artist"]["name"], safe=""),
+                        'url': track['url'],
+                        'name': track['name'],
+                        'image': track['image'][-1]['#text'] or None,
+                        'artist': {
+                            'name': track['artist']['name'],
+                            'url': 'https://www.last.fm/music/{}'.format(
+                                quote(track['artist']['name'], safe=''),
                             ),
                         },
-                        "date": int(track["date"]["uts"]),
+                        'date': int(track['date']['uts']),
                     }
-                    for track in data["track"]
+                    for track in data['track']
                 ]
             }
         ),
@@ -492,7 +499,7 @@ async def favorites():
 
 
 @router.get(
-    "/toptracks",
+    '/toptracks',
     # name="Get Last.fm Top Tracks",
     # description="Get a Last.fm user's top tracks",
     # parameters={
@@ -502,41 +509,41 @@ async def favorites():
     # },
 )
 async def toptracks():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
-    period = replace_timeframe(request.args.get("period", "overall"))
+    period = replace_timeframe(request.args.get('period', 'overall'))
 
     data = await response(
         {
-            "method": "user.getTopTracks",
-            "username": username,
-            "period": period,
-            "limit": min(int(request.args.get("limit", 10)), 1000),
-            "page": 1,
-            "autocorrect": 1,
+            'method': 'user.getTopTracks',
+            'username': username,
+            'period': period,
+            'limit': min(int(request.args.get('limit', 10)), 1000),
+            'page': 1,
+            'autocorrect': 1,
         },
-        "toptracks",
+        'toptracks',
     )
 
     return (
         jsonify(
             {
-                "tracks": [
+                'tracks': [
                     {
-                        "url": track["url"],
-                        "name": track["name"],
-                        "image": track["image"][-1]["#text"] or None,
-                        "artist": {
-                            "url": track["artist"]["url"],
-                            "name": track["artist"]["name"],
+                        'url': track['url'],
+                        'name': track['name'],
+                        'image': track['image'][-1]['#text'] or None,
+                        'artist': {
+                            'url': track['artist']['url'],
+                            'name': track['artist']['name'],
                         },
-                        "plays": int(track["playcount"]),
+                        'plays': int(track['playcount']),
                     }
-                    for track in data["track"]
+                    for track in data['track']
                 ],
-                "period": replace_timeframe(period, human=True),
+                'period': replace_timeframe(period, human=True),
             }
         ),
         200,
@@ -544,7 +551,7 @@ async def toptracks():
 
 
 @router.get(
-    "/collage",
+    '/collage',
     # name="Generate Last.fm Collage",
     # description="Generate a collage of a Last.fm user's top albums",
     # parameters={
@@ -554,41 +561,41 @@ async def toptracks():
     # },
 )
 async def collage():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
-    period = replace_timeframe(request.args.get("period", "overall"))
-    row, col = replace_size(request.args.get("size", "3x3"))
+    period = replace_timeframe(request.args.get('period', 'overall'))
+    row, col = replace_size(request.args.get('size', '3x3'))
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            "https://lastcollage.io/api/collage",
+            'https://lastcollage.io/api/collage',
             json={
-                "username": username,
-                "type": "albums",
-                "period": replace_timeframe(period, collage=True),
-                "rowNum": row,
-                "colNum": col,
-                "showName": "false",
-                "hideMissing": "true",
+                'username': username,
+                'type': 'albums',
+                'period': replace_timeframe(period, collage=True),
+                'rowNum': row,
+                'colNum': col,
+                'showName': 'false',
+                'hideMissing': 'true',
             },
         ) as response:
             data = await response.json()
 
-            if message := data.get("message"):
+            if message := data.get('message'):
                 raise ValueError(message)
 
             return jsonify(
                 {
-                    "url": "https://lastcollage.io/" + data["path"],
-                    "period": replace_timeframe(period, human=True),
+                    'url': f'https://lastcollage.io/{data["path"]}',
+                    'period': replace_timeframe(period, human=True),
                 }
             )
 
 
 @router.get(
-    "/artist/search",
+    '/artist/search',
     # name="Search Last.fm Artist",
     # description="Search for an artist on Last.fm",
     # parameters={
@@ -597,44 +604,44 @@ async def collage():
     # },
 )
 async def artist_search():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
-    artist = request.args.get("artist")
+    artist = request.args.get('artist')
     if not artist:
         raise ValueError("Parameter 'artist' is required.")
 
     data = await response(
         {
-            "method": "artist.search",
-            "artist": artist,
-            "limit": 1,
+            'method': 'artist.search',
+            'artist': artist,
+            'limit': 1,
         },
-        "results",
+        'results',
     )
-    if not data["artistmatches"]["artist"]:
-        raise ValueError("Artist not found", 404)
+    if not data['artistmatches']['artist']:
+        raise ValueError('Artist not found', 404)
 
-    artist = data["artistmatches"]["artist"][0]
+    artist = data['artistmatches']['artist'][0]
 
     data = await response(
         {
-            "method": "artist.getInfo",
-            "username": username,
-            "artist": artist["name"],
-            "autocorrect": 1,
+            'method': 'artist.getInfo',
+            'username': username,
+            'artist': artist['name'],
+            'autocorrect': 1,
         },
-        "artist",
+        'artist',
     )
 
     return (
         jsonify(
             {
-                "url": data["url"],
-                "name": data["name"].replace("LUCKI", "Lucki"),
-                "image": data["image"][-1]["#text"] or None,
-                "plays": int(data["stats"]["userplaycount"]),
+                'url': data['url'],
+                'name': data['name'].replace('LUCKI', 'Lucki'),
+                'image': data['image'][-1]['#text'] or None,
+                'plays': int(data['stats']['userplaycount']),
             }
         ),
         200,
@@ -642,7 +649,7 @@ async def artist_search():
 
 
 @router.get(
-    "/album/search",
+    '/album/search',
     # name="Search Last.fm album",
     # description="Search for an album on Last.fm",
     # parameters={
@@ -652,51 +659,51 @@ async def artist_search():
     # },
 )
 async def album_search():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
-    album = request.args.get("album")
+    album = request.args.get('album')
     if not album:
         raise ValueError("Parameter 'album' is required.")
 
-    artist = request.args.get("artist")
+    artist = request.args.get('artist')
     if not artist:
         data = await response(
             {
-                "method": "album.search",
-                "album": album,
-                "limit": 1,
+                'method': 'album.search',
+                'album': album,
+                'limit': 1,
             },
-            "results",
+            'results',
         )
-        if not data["albummatches"]["album"]:
-            raise ValueError("Album not found", 404)
+        if not data['albummatches']['album']:
+            raise ValueError('Album not found', 404)
 
-        album = data["albummatches"]["album"][0]["name"]
-        artist = data["albummatches"]["album"][0]["artist"]
+        album = data['albummatches']['album'][0]['name']
+        artist = data['albummatches']['album'][0]['artist']
 
     data = await response(
         {
-            "method": "album.getInfo",
-            "username": username,
-            "album": album,
-            "artist": artist,
-            "autocorrect": 1,
+            'method': 'album.getInfo',
+            'username': username,
+            'album': album,
+            'artist': artist,
+            'autocorrect': 1,
         },
-        "album",
+        'album',
     )
     if not data:
-        raise ValueError("Album not found", 404)
+        raise ValueError('Album not found', 404)
 
     return (
         jsonify(
             {
-                "url": data["url"],
-                "name": data["name"],
-                "artist": data["artist"].replace("LUCKI", "Lucki"),
-                "image": data["image"][-1]["#text"] or None,
-                "plays": int(data["userplaycount"]),
+                'url': data['url'],
+                'name': data['name'],
+                'artist': data['artist'].replace('LUCKI', 'Lucki'),
+                'image': data['image'][-1]['#text'] or None,
+                'plays': int(data['userplaycount']),
             }
         ),
         200,
@@ -704,7 +711,7 @@ async def album_search():
 
 
 @router.get(
-    "/track/search",
+    '/track/search',
     # name="Search Last.fm Track",
     # description="Search for a track on Last.fm",
     # parameters={
@@ -714,53 +721,53 @@ async def album_search():
     # },
 )
 async def track_search():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
-    track = request.args.get("track")
+    track = request.args.get('track')
     if not track:
         raise ValueError("Parameter 'track' is required.")
 
-    artist = request.args.get("artist")
+    artist = request.args.get('artist')
     if not artist:
         data = await response(
             {
-                "method": "track.search",
-                "track": track,
-                "limit": 1,
+                'method': 'track.search',
+                'track': track,
+                'limit': 1,
             },
-            "results",
+            'results',
         )
-        if not data["trackmatches"]["track"]:
-            raise ValueError("Track not found", 404)
+        if not data['trackmatches']['track']:
+            raise ValueError('Track not found', 404)
 
-        track = data["trackmatches"]["track"][0]["name"]
-        artist = data["trackmatches"]["track"][0]["artist"]
+        track = data['trackmatches']['track'][0]['name']
+        artist = data['trackmatches']['track'][0]['artist']
 
     data = await response(
         {
-            "method": "track.getInfo",
-            "username": username,
-            "track": track,
-            "artist": artist,
-            "autocorrect": 1,
+            'method': 'track.getInfo',
+            'username': username,
+            'track': track,
+            'artist': artist,
+            'autocorrect': 1,
         },
-        "track",
+        'track',
     )
     if not data:
-        raise ValueError("Track not found", 404)
+        raise ValueError('Track not found', 404)
 
     return (
         jsonify(
             {
-                "url": data["url"],
-                "name": data["name"],
-                "artist": data["artist"]["name"],
-                "image": data["album"]["image"][-1]["#text"] or None
-                if data.get("album")
+                'url': data['url'],
+                'name': data['name'],
+                'artist': data['artist']['name'],
+                'image': data['album']['image'][-1]['#text'] or None
+                if data.get('album')
                 else None,
-                "plays": int(data["userplaycount"]),
+                'plays': int(data['userplaycount']),
             }
         ),
         200,
@@ -768,7 +775,7 @@ async def track_search():
 
 
 @router.get(
-    "/library/artists",
+    '/library/artists',
     # name="Index Last.fm Artist Library",
     # description="Index a Last.fm user's artist library",
     # parameters={
@@ -776,30 +783,30 @@ async def track_search():
     # },
 )
 async def library_artists():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
     data = await response(
         {
-            "method": "user.getTopArtists",
-            "username": username,
-            "limit": 1000,
-            "page": 1,
-            "autocorrect": 1,
+            'method': 'user.getTopArtists',
+            'username': username,
+            'limit': 1000,
+            'page': 1,
+            'autocorrect': 1,
         },
-        "topartists",
+        'topartists',
     )
-    pages = int(data["@attr"]["totalPages"])
+    pages = int(data['@attr']['totalPages'])
 
     artists = list()
     artists.extend(
         [
             {
-                "name": artist["name"],
-                "plays": int(artist["playcount"]),
+                'name': artist['name'],
+                'plays': int(artist['playcount']),
             }
-            for artist in data["artist"]
+            for artist in data['artist']
         ]
     )
 
@@ -809,13 +816,13 @@ async def library_artists():
             tasks.append(
                 response(
                     {
-                        "method": "user.getTopArtists",
-                        "username": username,
-                        "limit": 1000,
-                        "page": page,
-                        "autocorrect": 1,
+                        'method': 'user.getTopArtists',
+                        'username': username,
+                        'limit': 1000,
+                        'page': page,
+                        'autocorrect': 1,
                     },
-                    "topartists",
+                    'topartists',
                 )
             )
         data = await asyncio.gather(*tasks)
@@ -823,10 +830,10 @@ async def library_artists():
             artists.extend(
                 [
                     {
-                        "name": artist["name"],
-                        "plays": int(artist["playcount"]),
+                        'name': artist['name'],
+                        'plays': int(artist['playcount']),
                     }
-                    for artist in item["artist"]
+                    for artist in item['artist']
                 ]
             )
 
@@ -837,7 +844,7 @@ async def library_artists():
 
 
 @router.get(
-    "/library/albums",
+    '/library/albums',
     # name="Index Last.fm Album Library",
     # description="Index a Last.fm user's album library",
     # parameters={
@@ -845,31 +852,31 @@ async def library_artists():
     # },
 )
 async def library_albums():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
     data = await response(
         {
-            "method": "user.getTopAlbums",
-            "username": username,
-            "limit": 1000,
-            "page": 1,
-            "autocorrect": 1,
+            'method': 'user.getTopAlbums',
+            'username': username,
+            'limit': 1000,
+            'page': 1,
+            'autocorrect': 1,
         },
-        "topalbums",
+        'topalbums',
     )
-    pages = int(data["@attr"]["totalPages"])
+    pages = int(data['@attr']['totalPages'])
 
     albums = list()
     albums.extend(
         [
             {
-                "artist": album["artist"]["name"],
-                "name": album["name"],
-                "plays": int(album["playcount"]),
+                'artist': album['artist']['name'],
+                'name': album['name'],
+                'plays': int(album['playcount']),
             }
-            for album in data["album"]
+            for album in data['album']
         ]
     )
 
@@ -879,13 +886,13 @@ async def library_albums():
             tasks.append(
                 response(
                     {
-                        "method": "user.getTopAlbums",
-                        "username": username,
-                        "limit": 1000,
-                        "page": page,
-                        "autocorrect": 1,
+                        'method': 'user.getTopAlbums',
+                        'username': username,
+                        'limit': 1000,
+                        'page': page,
+                        'autocorrect': 1,
                     },
-                    "topalbums",
+                    'topalbums',
                 )
             )
         data = await asyncio.gather(*tasks)
@@ -893,11 +900,11 @@ async def library_albums():
             albums.extend(
                 [
                     {
-                        "artist": album["artist"]["name"],
-                        "name": album["name"],
-                        "plays": int(album["playcount"]),
+                        'artist': album['artist']['name'],
+                        'name': album['name'],
+                        'plays': int(album['playcount']),
                     }
-                    for album in item["album"]
+                    for album in item['album']
                 ]
             )
 
@@ -908,7 +915,7 @@ async def library_albums():
 
 
 @router.get(
-    "/library/tracks",
+    '/library/tracks',
     # name="Index Last.fm Track Library",
     # description="Index a Last.fm user's track library",
     # parameters={
@@ -916,31 +923,31 @@ async def library_albums():
     # },
 )
 async def library_tracks():
-    username = request.args.get("username") or request.args.get("user")
+    username = request.args.get('username') or request.args.get('user')
     if not username:
         raise ValueError("Parameter 'username' is required.")
 
     data = await response(
         {
-            "method": "user.getTopTracks",
-            "username": username,
-            "limit": 1000,
-            "page": 1,
-            "autocorrect": 1,
+            'method': 'user.getTopTracks',
+            'username': username,
+            'limit': 1000,
+            'page': 1,
+            'autocorrect': 1,
         },
-        "toptracks",
+        'toptracks',
     )
-    pages = int(data["@attr"]["totalPages"])
+    pages = int(data['@attr']['totalPages'])
 
     tracks = list()
     tracks.extend(
         [
             {
-                "artist": track["artist"]["name"],
-                "name": track["name"],
-                "plays": int(track["playcount"]),
+                'artist': track['artist']['name'],
+                'name': track['name'],
+                'plays': int(track['playcount']),
             }
-            for track in data["track"]
+            for track in data['track']
         ]
     )
 
@@ -950,13 +957,13 @@ async def library_tracks():
             tasks.append(
                 response(
                     {
-                        "method": "user.getTopTracks",
-                        "username": username,
-                        "limit": 1000,
-                        "page": page,
-                        "autocorrect": 1,
+                        'method': 'user.getTopTracks',
+                        'username': username,
+                        'limit': 1000,
+                        'page': page,
+                        'autocorrect': 1,
                     },
-                    "toptracks",
+                    'toptracks',
                 )
             )
         data = await asyncio.gather(*tasks)
@@ -964,11 +971,11 @@ async def library_tracks():
             tracks.extend(
                 [
                     {
-                        "artist": track["artist"]["name"],
-                        "name": track["name"],
-                        "plays": int(track["playcount"]),
+                        'artist': track['artist']['name'],
+                        'name': track['name'],
+                        'plays': int(track['playcount']),
                     }
-                    for track in item["track"]
+                    for track in item['track']
                 ]
             )
 
@@ -979,43 +986,45 @@ async def library_tracks():
 
 
 async def response(payload: dict, parameter: str = None, **kwargs: dict):
-    autocorrect = payload.pop("autocorrect", 0)
+    autocorrect = payload.pop('autocorrect', 0)
     payload.update(
         {
-            "api_key": "cbb5022494306605ba105a9a7495cbb8",
-            "format": "json",
-            "autocorrect": 0,
+            'api_key': random.choice(config.LastFM.api_keys),
+            'format': 'json',
+            'autocorrect': 0,
         }
     )
 
     async with aiohttp.ClientSession() as session:
         async with session.get(
-            "https://ws.audioscrobbler.com/2.0/",
+            config.LastFM.api_url,
             params=payload,
         ) as response:
             if not response.ok:
                 try:
                     data = await response.json()
                 except aiohttp.ContentTypeError:
-                    raise ValueError("Last.fm API appears to be down", 503)
+                    raise ValueError('Last.fm API appears to be down', 503)
                 else:
-                    if kwargs.get("null_output"):
+                    if kwargs.get('null_output'):
                         return None
                     else:
-                        raise ValueError(data["message"], response.status)
+                        raise ValueError(data['message'], response.status)
             elif response.status == 429:
-                raise ValueError("Last.fm API rate limit exceeded", 429)
+                raise ValueError('Last.fm API rate limit exceeded', 429)
             else:
                 data = await response.json()
                 if parameter and not data.get(parameter):
-                    raise ValueError("Last.fm API returned an empty response", 404)
+                    raise ValueError(
+                        'Last.fm API returned an empty response', 404
+                    )
 
                 if autocorrect:
                     data = json.dumps(data)
                     data = replace_artist(
                         data,
-                        "Lucky Twice",
-                        "LUCKI",
+                        'Lucky Twice',
+                        'LUCKI',
                     )
                     data = json.loads(data)
                 return data if not parameter else data[parameter]
@@ -1030,101 +1039,101 @@ def replace_artist(text: str, source: str, output: str):
 
 
 def replace_timeframe(period: str, human: bool = False, collage: bool = False):
-    period = period.lower().replace(" ", "")
+    period = period.lower().replace(' ', '')
     if not human:
         if period in (
-            "weekly",
-            "week",
-            "1week",
-            "7days",
-            "7day",
-            "7ds",
-            "7d",
+            'weekly',
+            'week',
+            '1week',
+            '7days',
+            '7day',
+            '7ds',
+            '7d',
         ):
-            period = "7day" if not collage else "1week"
+            period = '7day' if not collage else '1week'
         elif period in (
-            "monthly",
-            "month",
-            "1month",
-            "1m",
-            "30days",
-            "30day",
-            "30ds",
-            "30d",
+            'monthly',
+            'month',
+            '1month',
+            '1m',
+            '30days',
+            '30day',
+            '30ds',
+            '30d',
         ):
-            period = "1month"
+            period = '1month'
         elif period in (
-            "3months",
-            "3month",
-            "3ms",
-            "3m",
-            "90days",
-            "90day",
-            "90ds",
-            "90d",
+            '3months',
+            '3month',
+            '3ms',
+            '3m',
+            '90days',
+            '90day',
+            '90ds',
+            '90d',
         ):
-            period = "3month"
+            period = '3month'
         elif period in (
-            "halfyear",
-            "6months",
-            "6month",
-            "6mo",
-            "6ms",
-            "6m",
-            "180days",
-            "180day",
-            "180ds",
-            "180d",
+            'halfyear',
+            '6months',
+            '6month',
+            '6mo',
+            '6ms',
+            '6m',
+            '180days',
+            '180day',
+            '180ds',
+            '180d',
         ):
-            period = "6month"
+            period = '6month'
         elif period in (
-            "yearly",
-            "year",
-            "yr",
-            "1year",
-            "1y",
-            "12months",
-            "12month",
-            "12mo",
-            "12ms",
-            "12m",
-            "365days",
-            "365day",
-            "365ds",
-            "365d",
+            'yearly',
+            'year',
+            'yr',
+            '1year',
+            '1y',
+            '12months',
+            '12month',
+            '12mo',
+            '12ms',
+            '12m',
+            '365days',
+            '365day',
+            '365ds',
+            '365d',
         ):
-            period = "12month" if not collage else "1year"
+            period = '12month' if not collage else '1year'
         else:
-            period = "overall" if not collage else "forever"
+            period = 'overall' if not collage else 'forever'
     else:
-        if period == "7day":
-            period = "weekly"
-        elif period == "1month":
-            period = "monthly"
-        elif period == "3month":
-            period = "past 3 months"
-        elif period == "6month":
-            period = "past 6 months"
-        elif period == "12month":
-            period = "yearly"
+        if period == '7day':
+            period = 'weekly'
+        elif period == '1month':
+            period = 'monthly'
+        elif period == '3month':
+            period = 'past 3 months'
+        elif period == '6month':
+            period = 'past 6 months'
+        elif period == '12month':
+            period = 'yearly'
         else:
-            period = "overall"
+            period = 'overall'
 
     return period
 
 
 def replace_size(size: str):
-    if "x" not in size:
-        raise ValueError("Collage size invalid")
-    if not len(size.split("x")) == 2:
-        raise ValueError("Collage size invalid")
-    row, col = size.split("x")
+    if 'x' not in size:
+        raise ValueError('Collage size invalid')
+    if not len(size.split('x')) == 2:
+        raise ValueError('Collage size invalid')
+    row, col = size.split('x')
     if not row.isdigit() or not col.isdigit():
-        raise ValueError("Collage size invalid")
+        raise ValueError('Collage size invalid')
     if (int(row) + int(col)) < 2:
-        raise ValueError("Collage size is too small")
+        raise ValueError('Collage size is too small')
     elif (int(row) + int(col)) > 20:
-        raise ValueError("Collage size is too large")
+        raise ValueError('Collage size is too large')
 
     return (
         int(row),
