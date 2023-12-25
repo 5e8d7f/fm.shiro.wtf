@@ -68,7 +68,7 @@ async def internal_server_error(error):
 
 @app.route('/')
 async def index():
-    return redirect('https://discord.gg/wock')
+    return redirect(config.redirect)
 
 
 if __name__ == '__main__':
